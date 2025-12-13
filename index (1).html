@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Expenses">
+    <meta name="theme-color" content="#F2F2F7">
+    
+    <title>Expense Tracker</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            /* iOS Colors */
+            --ios-bg: #F2F2F7;
+            --ios-card: #FFFFFF;
+            --ios-text-primary: #000000;
+            --ios-text-secondary: #8E8E93;
+            --ios-text-tertiary: #C7C7CC;
+            --ios-blue: #007AFF;
+            --ios-green: #34C759;
+            --ios-red: #FF3B30;
+            --ios-gray: #F2F2F7;
+            --ios-separator: #C6C6C8;
+            --ios-primary: #2D3748;
+            
+            /* Spacing */
+            --safe-area-top: env(safe-area-inset-top);
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            background: var(--ios-bg);
+            color: var(--ios-text-primary);
+            line-height: 1.47;
+            -webkit-font-smoothing: antialiased;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+            overflow-x: hidden;
+        }
+
+        /* iOS Status Bar Spacer */
+        .status-bar-spacer {
+            height: 44px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--ios-bg);
+            padding: 20px 20px 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .menu-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            font-size: 24px;
+            color: var(--ios-blue);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Container */
+        .container {
+            padding: 0 16px 100px 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* iOS Card */
+        .card {
+            background: var(--ios-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Summary Card */
+        .summary-card {
+            text-align: center;
+            padding: 24px 16px;
+        }
+
+        .summary-amount {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 4px;
+        }
+
+        .summary-label {
+            font-size: 15px;
+            color: var(--ios-text-secondary);
+        }
+
+        /* Section Header */
+        .section-header {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 24px 0 12px 0;
+            letter-spacing: -0.3px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ios-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            background: var(--ios-gray);
+            border-radius: 10px;
+            font-size: 17px;
+            font-family: inherit;
+            color: var(--ios-text-primary);
+            transition: background 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            background: #E5E5EA;
+        }
+
+        .form-input::placeholder {
+            color: var(--ios-text-tertiary);
+        }
+
+        select.form-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%238E8E93' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* iOS Button */
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: var(--ios-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 20px;
+        }
+
+        .btn-primary:active {
+            opacity: 0.7;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 12px;
+            background: var(--ios-gray);
+            color: var(--ios-blue);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-secondary:active {
+            opacity: 0.7;
+        }
+
+        /* iOS List */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 0.5px solid var(--ios-separator);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item-content {
+            flex: 1;
+        }
+
+        .list-item-title {
+            font-size: 17px;
+            margin-bottom: 2px;
+        }
+
+        .list-item-subtitle {
+            font-size: 15px;
+            color: var(--ios-text-secondary);
+        }
+
+        .list-item-value {
+            font-size: 17px;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .list-item-action {
+            background: none;
+            border: none;
+            color: var(--ios-red);
+            font-size: 15px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--ios-text-primary);
+        }
+
+        .empty-state-text {
+            font-size: 17px;
+        }
+
+        /* Bottom Sheet */
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .bottom-sheet-overlay.show {
+            display: block;
+        }
+
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--ios-card);
+            border-radius: 12px 12px 0 0;
+            padding: 8px 8px calc(var(--safe-area-bottom) + 8px) 8px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+        }
+
+        .bottom-sheet.show {
+            transform: translateY(0);
+        }
+
+        .bottom-sheet-handle {
+            width: 36px;
+            height: 5px;
+            background: var(--ios-text-tertiary);
+            border-radius: 3px;
+            margin: 8px auto 16px auto;
+        }
+
+        .bottom-sheet-item {
+            width: 100%;
+            padding: 16px;
+            background: none;
+            border: none;
+            text-align: center;
+            font-size: 20px;
+            color: var(--ios-blue);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: background 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .bottom-sheet-item:active {
+            background: var(--ios-gray);
+        }
+
+        .bottom-sheet-item.cancel {
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .bottom-sheet-item.destructive {
+            color: var(--ios-red);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: calc(var(--safe-area-top) + 60px);
+            left: 16px;
+            right: 16px;
+            background: var(--ios-card);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: var(--ios-text-secondary);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Refresh Indicator */
+        .refresh-indicator {
+            text-align: center;
+            padding: 12px;
+            color: var(--ios-text-secondary);
+            font-size: 15px;
+        }
+
+        /* Section divider */
+        .section-divider {
+            background: var(--ios-card);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .settings-item {
+            padding: 16px;
+            border-bottom: 0.5px solid var(--ios-separator);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 17px;
+            margin-bottom: 8px;
+        }
+
+        .settings-description {
+            font-size: 13px;
+            color: var(--ios-text-secondary);
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .container::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Pull to refresh hint */
+        .pull-hint {
+            text-align: center;
+            color: var(--ios-text-secondary);
+            font-size: 13px;
+            padding: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .pull-hint.show {
+            opacity: 1;
+        }
+
+        /* iOS number input fix */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>Expense Tracker</h1>
+        <button class="menu-btn" onclick="openMenu()">⋯</button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" id="mainContainer">
+        <!-- Pull to refresh hint -->
+        <div class="pull-hint" id="pullHint">Pull to refresh</div>
+
+        <!-- Summary Card -->
+        <div class="card summary-card">
+            <div class="summary-amount" id="todayAmount">₹0</div>
+            <div class="summary-label">Spent Today</div>
+        </div>
+
+        <!-- Add Expense Form -->
+        <div class="section-header">Add Expense</div>
+        <div class="card">
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" class="form-input" id="amount" step="0.01" placeholder="0.00" required inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select class="form-input" id="category" required>
+                        <option value="">Select category</option>
+                        <option value="Food">🍔 Food & Dining</option>
+                        <option value="Transport">🚗 Transportation</option>
+                        <option value="Shopping">🛍️ Shopping</option>
+                        <option value="Bills">💡 Bills & Utilities</option>
+                        <option value="Entertainment">🎬 Entertainment</option>
+                        <option value="Healthcare">⚕️ Healthcare</option>
+                        <option value="Education">📚 Education</option>
+                        <option value="Investment">💰 Investment</option>
+                        <option value="Other">📦 Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" id="description" placeholder="e.g., Lunch at restaurant" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea class="form-input" id="notes" placeholder="Add any additional details..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <span id="submitText">Add Expense</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Recent Expenses -->
+        <div class="section-header">Recent</div>
+        <div class="card" id="recentExpenses">
+            <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <div class="empty-state-title">No expenses yet</div>
+                <div class="empty-state-text">Add your first expense above</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet Menu -->
+    <div class="bottom-sheet-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+    <div class="bottom-sheet" id="menuSheet">
+        <div class="bottom-sheet-handle"></div>
+        <button class="bottom-sheet-item" onclick="showDashboard()">📊 Dashboard</button>
+        <button class="bottom-sheet-item" onclick="showHistory()">📜 History</button>
+        <button class="bottom-sheet-item" onclick="showSettings()">⚙️ Settings</button>
+        <button class="bottom-sheet-item cancel" onclick="closeMenu()">Cancel</button>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon" id="toastIcon">✓</div>
+        <div class="toast-content">
+            <div class="toast-title" id="toastTitle">Success</div>
+            <div class="toast-message" id="toastMessage">Operation completed</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let scriptUrl = localStorage.getItem('scriptUrl') || '';
+        let pullStartY = 0;
+        let isPulling = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date
+            document.getElementById('date').valueAsDate = new Date();
+            
+            // Load recent expenses
+            loadRecentExpenses();
+            
+            // Setup pull to refresh
+            setupPullToRefresh();
+            
+            // Auto-focus amount field
+            setTimeout(() => {
+                document.getElementById('amount').focus();
+            }, 300);
+        });
+
+        // Form submission
+        document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            
+            submitBtn.disabled = true;
+            submitText.innerHTML = '<span class="spinner"></span>';
+            
+            const expense = {
+                date: document.getElementById('date').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().toISOString()
+            };
+
+            console.log('Form submitted with expense:', expense);
+
+            try {
+                await saveExpenseToSheets(expense);
+                
+                console.log('✅ Expense saved successfully');
+                
+                // Reset form
+                this.reset();
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Show success with vibration
+                if (navigator.vibrate) {
+                    navigator.vibrate([10, 30, 10]);
+                }
+                
+                // Show clear success message
+                showToast('✓', 'Expense Added!', `₹${expense.amount.toFixed(2)} saved to ${expense.category}`);
+                
+                // Reload recent - with delay to allow Google Sheets to update
+                setTimeout(async () => {
+                    await loadRecentExpenses();
+                }, 1000);
+                
+                // Focus amount for next entry
+                setTimeout(() => {
+                    document.getElementById('amount').focus();
+                }, 800);
+                
+            } catch (error) {
+                console.error('❌ Error saving expense:', error);
+                
+                // Show detailed error
+                const errorMsg = error.message || 'Unknown error occurred';
+                showToast('✕', 'Save Failed', errorMsg);
+                
+                // Vibrate error pattern
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 100, 50]);
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitText.textContent = 'Add Expense';
+            }
+        });
+
+        // Save to Google Sheets
+        async function saveExpenseToSheets(expense) {
+            if (!scriptUrl) {
+                showToast('⚠️', 'Not Configured', 'Please tap ⋯ and configure Google Sheets');
+                throw new Error('Google Sheets not configured');
+            }
+
+            console.log('Saving to Google Sheets:', expense);
+            console.log('Script URL:', scriptUrl);
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: JSON.stringify({
+                        action: 'add',
+                        ...expense
+                    }),
+                    redirect: 'follow'
+                });
+
+                console.log('Response status:', response.status);
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${responseText}`);
+                }
+
+                // Try to parse as JSON
+                try {
+                    const data = JSON.parse(responseText);
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to save');
+                    }
+                } catch (parseError) {
+                    // If can't parse, but status was ok, assume success
+                    console.log('Could not parse response, but status was OK');
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Save error:', error);
+                throw error;
+            }
+        }
+
+        // Load recent expenses from Google Sheets
+        async function loadRecentExpenses() {
+            if (!scriptUrl) {
+                return;
+            }
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: JSON.stringify({
+                        action: 'getRecent',
+                        limit: 5
+                    }),
+                    redirect: 'follow'
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.expenses) {
+                    displayRecentExpenses(data.expenses);
+                    updateTodayTotal(data.expenses);
+                }
+            } catch (error) {
+                console.error('Error loading expenses:', error);
+            }
+        }
+
+        // Display recent expenses
+        function displayRecentExpenses(expenses) {
+            const container = document.getElementById('recentExpenses');
+            
+            if (expenses.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-title">No expenses yet</div>
+                        <div class="empty-state-text">Add your first expense above</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by date (newest first)
+            const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recent = sorted.slice(0, 5);
+
+            container.innerHTML = recent.map(exp => {
+                const date = new Date(exp.date);
+                const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                
+                return `
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <div class="list-item-title">${exp.description}</div>
+                            <div class="list-item-subtitle">${exp.category} • ${dateStr}</div>
+                        </div>
+                        <div class="list-item-value">₹${exp.amount.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update today's total
+        function updateTodayTotal(expenses) {
+            const today = new Date().toISOString().split('T')[0];
+            const todayExpenses = expenses.filter(exp => exp.date === today);
+            const total = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            
+            document.getElementById('todayAmount').textContent = `₹${total.toFixed(2)}`;
+        }
+
+        // Toast notification
+        function showToast(icon, title, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+            
+            toast.classList.add('show');
+            
+            // Auto-hide after 4 seconds (increased from 3 for better visibility)
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Menu functions
+        function openMenu() {
+            document.getElementById('menuOverlay').classList.add('show');
+            document.getElementById('menuSheet').classList.add('show');
+        }
+
+        function closeMenu() {
+            document.getElementById('menuOverlay').classList.remove('show');
+            document.getElementById('menuSheet').classList.remove('show');
+        }
+
+        // Navigation functions
+        function showDashboard() {
+            closeMenu();
+            showToast('📊', 'Coming Soon', 'Dashboard feature will be added in next update');
+        }
+
+        function showHistory() {
+            closeMenu();
+            showToast('📜', 'Coming Soon', 'History feature will be added in next update');
+        }
+
+        function showSettings() {
+            closeMenu();
+            
+            // Create and show settings overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'settingsOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--ios-bg);
+                z-index: 3000;
+                overflow-y: auto;
+                padding: 20px;
+                padding-top: calc(var(--safe-area-top) + 60px);
+            `;
+            
+            const currentUrl = localStorage.getItem('scriptUrl') || '';
+            
+            overlay.innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 30px;">
+                        <button onclick="closeSettings()" style="width: 32px; height: 32px; border: none; background: none; font-size: 28px; color: var(--ios-blue); cursor: pointer;">‹</button>
+                        <h1 style="font-size: 22px; font-weight: 600;">Settings</h1>
+                    </div>
+                    
+                    <div style="background: #E8F4FD; border-left: 4px solid var(--ios-blue); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #0051A5;">⚠️ Setup Required</div>
+                        <div style="font-size: 13px; color: #0051A5; line-height: 1.5;">
+                            Configure Google Sheets to save your expenses to the cloud. All data will be backed up safely.
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 12px;">Step 1: Create Google Sheet</h3>
+                        <ol style="margin-left: 20px; font-size: 15px; line-height: 1.8; color: #333;">
+                            <li>Go to <a href="https://sheets.google.com" target="_blank" style="color: var(--ios-blue);">Google Sheets</a></li>
+                            <li>Open your spreadsheet (or create new)</li>
+                            <li>Create tab named: <strong>Expenses</strong></li>
+                            <li>Add headers: Date, Amount, Category, Description, Notes, Timestamp</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 12px;">Step 2: Add Script</h3>
+                        <ol style="margin-left: 20px; font-size: 15px; line-height: 1.8; color: #333;">
+                            <li>In Google Sheet: Extensions → Apps Script</li>
+                            <li>Delete existing code</li>
+                            <li>Copy script from GitHub repository</li>
+                            <li>Click Save (💾)</li>
+                        </ol>
+                        <div style="margin-top: 12px; padding: 12px; background: #F5F5F5; border-radius: 8px; font-size: 13px; color: #666;">
+                            Script is available in your expense-tracker GitHub repository
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 12px;">Step 3: Deploy</h3>
+                        <ol style="margin-left: 20px; font-size: 15px; line-height: 1.8; color: #333;">
+                            <li>Click: Deploy → New Deployment</li>
+                            <li>Click gear ⚙️, select "Web app"</li>
+                            <li>Set "Who has access" to: <strong>Anyone</strong></li>
+                            <li>Click Deploy</li>
+                            <li>Authorize and grant permissions</li>
+                            <li>Copy the Web app URL</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 12px;">Step 4: Enter URL</h3>
+                        <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." 
+                               value="${currentUrl}"
+                               style="width: 100%; padding: 12px 16px; border: none; background: #F2F2F7; border-radius: 10px; font-size: 15px; margin-bottom: 12px;">
+                        <button onclick="saveScriptUrl()" style="width: 100%; padding: 16px; background: #2D3748; color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer;">
+                            Save Configuration
+                        </button>
+                        ${currentUrl ? `
+                        <button onclick="testConnectionInline()" style="width: 100%; padding: 12px; background: #F2F2F7; color: #007AFF; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px;">
+                            🔧 Test Connection
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+        }
+        
+        function closeSettings() {
+            const overlay = document.getElementById('settingsOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+        
+        function saveScriptUrl() {
+            const input = document.getElementById('scriptUrlInput');
+            const url = input.value.trim();
+            
+            if (!url) {
+                showToast('✕', 'Error', 'Please enter a URL');
+                return;
+            }
+            
+            if (!url.includes('script.google.com')) {
+                showToast('✕', 'Invalid URL', 'Must be a Google Apps Script URL');
+                return;
+            }
+            
+            localStorage.setItem('scriptUrl', url);
+            scriptUrl = url;
+            
+            showToast('✓', 'Saved!', 'Configuration saved successfully');
+            
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+            
+            setTimeout(() => {
+                closeSettings();
+            }, 1500);
+        }
+        
+        async function testConnectionInline() {
+            if (!scriptUrl) {
+                showToast('✕', 'Error', 'Please save URL first');
+                return;
+            }
+            
+            showToast('⏳', 'Testing...', 'Connecting to Google Sheets');
+            
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: JSON.stringify({
+                        action: 'getRecent',
+                        limit: 1
+                    }),
+                    redirect: 'follow'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✓', 'Success!', 'Connection working perfectly');
+                    if (navigator.vibrate) {
+                        navigator.vibrate([10, 50, 10]);
+                    }
+                } else {
+                    showToast('✕', 'Failed', data.error || 'Connection failed');
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                showToast('✕', 'Error', 'Could not connect: ' + error.message);
+            }
+        }
+
+        // Pull to refresh
+        function setupPullToRefresh() {
+            const container = document.getElementById('mainContainer');
+            const pullHint = document.getElementById('pullHint');
+            
+            container.addEventListener('touchstart', (e) => {
+                if (container.scrollTop === 0) {
+                    pullStartY = e.touches[0].clientY;
+                    isPulling = true;
+                }
+            });
+            
+            container.addEventListener('touchmove', (e) => {
+                if (!isPulling) return;
+                
+                const pullDistance = e.touches[0].clientY - pullStartY;
+                
+                if (pullDistance > 80) {
+                    pullHint.classList.add('show');
+                } else {
+                    pullHint.classList.remove('show');
+                }
+            });
+            
+            container.addEventListener('touchend', async (e) => {
+                if (!isPulling) return;
+                
+                const pullDistance = e.changedTouches[0].clientY - pullStartY;
+                
+                if (pullDistance > 80) {
+                    pullHint.textContent = 'Refreshing...';
+                    await loadRecentExpenses();
+                    showToast('↻', 'Refreshed', 'Loaded latest expenses');
+                    
+                    if (navigator.vibrate) {
+                        navigator.vibrate(10);
+                    }
+                }
+                
+                pullHint.classList.remove('show');
+                pullHint.textContent = 'Pull to refresh';
+                isPulling = false;
+            });
+        }
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>

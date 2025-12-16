@@ -733,8 +733,7 @@
                         'Content-Type': 'text/plain',
                     },
                     body: JSON.stringify({
-                        action: 'getRecent',
-                        limit: 5
+                        action: 'getAll'
                     }),
                     redirect: 'follow'
                 });
@@ -787,11 +786,22 @@
 
         // Update today's total
         function updateTodayTotal(expenses) {
-            const today = new Date().toISOString().split('T')[0];
-            const todayExpenses = expenses.filter(exp => exp.date === today);
-            const total = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            const todayKey = getLocalDateKey(new Date());
+            const todayExpenses = expenses.filter(exp => {
+                if (!exp.date) return false;
+                return getLocalDateKey(exp.date) === todayKey;
+            });
+            const total = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
             
             document.getElementById('todayAmount').textContent = `₹${total.toFixed(2)}`;
+        }
+
+        function getLocalDateKey(dateInput) {
+            const d = new Date(dateInput);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
         }
 
         // Toast notification
@@ -828,7 +838,50 @@
 
         function showHistory() {
             closeMenu();
-            showToast('📜', 'Coming Soon', 'History feature will be added in next update');
+
+            // Remove existing overlay if open
+            const existing = document.getElementById('historyOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'historyOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--ios-bg);
+                z-index: 3000;
+                overflow-y: auto;
+                padding: 20px;
+                padding-top: calc(var(--safe-area-top) + 60px);
+            `;
+
+            overlay.innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                        <button onclick="closeHistory()" style="width: 32px; height: 32px; border: none; background: none; font-size: 28px; color: var(--ios-blue); cursor: pointer;">‹</button>
+                        <h1 style="font-size: 22px; font-weight: 600;">History</h1>
+                        <button onclick="loadHistory()" style="margin-left: auto; padding: 8px 12px; border: none; background: var(--ios-gray); color: var(--ios-blue); border-radius: 10px; font-weight: 600; cursor: pointer;">Refresh</button>
+                    </div>
+
+                    <div id="historyContent">
+                        <div class="card" style="text-align: center; padding: 20px;">
+                            <div class="spinner" style="width: 24px; height: 24px; border-color: rgba(0,0,0,0.1); border-top-color: var(--ios-blue);"></div>
+                            <div style="margin-top: 12px; color: var(--ios-text-secondary);">Loading history...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            loadHistory();
+        }
+
+        function closeHistory() {
+            const overlay = document.getElementById('historyOverlay');
+            if (overlay) overlay.remove();
         }
 
         function showSettings() {
@@ -926,6 +979,110 @@
             if (overlay) {
                 overlay.remove();
             }
+        }
+
+        async function loadHistory() {
+            const container = document.getElementById('historyContent');
+
+            if (!container) return;
+
+            if (!scriptUrl) {
+                container.innerHTML = `
+                    <div class="card empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Not configured</div>
+                        <div class="empty-state-text">Open Settings (⋯) and add your Google Apps Script URL.</div>
+                    </div>
+                `;
+                showToast('⚠️', 'Not Configured', 'Save your Google Apps Script URL in Settings');
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="card" style="text-align: center; padding: 20px;">
+                    <div class="spinner" style="width: 24px; height: 24px; border-color: rgba(0,0,0,0.1); border-top-color: var(--ios-blue);"></div>
+                    <div style="margin-top: 12px; color: var(--ios-text-secondary);">Fetching expenses...</div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: JSON.stringify({
+                        action: 'getAll'
+                    }),
+                    redirect: 'follow'
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.expenses) {
+                    displayHistory(data.expenses);
+                } else {
+                    const errorMsg = data.error || 'Could not load history';
+                    container.innerHTML = `
+                        <div class="card empty-state">
+                            <div class="empty-state-icon">✕</div>
+                            <div class="empty-state-title">Load failed</div>
+                            <div class="empty-state-text">${errorMsg}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+                container.innerHTML = `
+                    <div class="card empty-state">
+                        <div class="empty-state-icon">✕</div>
+                        <div class="empty-state-title">Network error</div>
+                        <div class="empty-state-text">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayHistory(expenses) {
+            const container = document.getElementById('historyContent');
+            if (!container) return;
+
+            if (!expenses || expenses.length === 0) {
+                container.innerHTML = `
+                    <div class="card empty-state">
+                        <div class="empty-state-icon">📜</div>
+                        <div class="empty-state-title">No expenses yet</div>
+                        <div class="empty-state-text">Add an expense to see it here.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort newest first
+            const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const items = sorted.map(exp => {
+                const date = new Date(exp.date);
+                const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const notes = exp.notes ? `<div class="list-item-subtitle" style="margin-top: 4px;">${exp.notes}</div>` : '';
+
+                return `
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <div class="list-item-title">${exp.description || 'No description'}</div>
+                            <div class="list-item-subtitle">${exp.category} • ${dateStr}</div>
+                            ${notes}
+                        </div>
+                        <div class="list-item-value">₹${Number(exp.amount || 0).toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="card">
+                    ${items}
+                </div>
+            `;
         }
         
         function saveScriptUrl() {

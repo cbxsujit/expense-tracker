@@ -833,7 +833,50 @@
         // Navigation functions
         function showDashboard() {
             closeMenu();
-            showToast('📊', 'Coming Soon', 'Dashboard feature will be added in next update');
+
+            // Remove existing overlay if open
+            const existing = document.getElementById('dashboardOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'dashboardOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--ios-bg);
+                z-index: 3000;
+                overflow-y: auto;
+                padding: 20px;
+                padding-top: calc(var(--safe-area-top) + 60px);
+            `;
+
+            overlay.innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                        <button onclick="closeDashboard()" style="width: 32px; height: 32px; border: none; background: none; font-size: 28px; color: var(--ios-blue); cursor: pointer;">‹</button>
+                        <h1 style="font-size: 22px; font-weight: 600;">Dashboard</h1>
+                        <button onclick="loadDashboard()" style="margin-left: auto; padding: 8px 12px; border: none; background: var(--ios-gray); color: var(--ios-blue); border-radius: 10px; font-weight: 600; cursor: pointer;">Refresh</button>
+                    </div>
+
+                    <div id="dashboardContent">
+                        <div class="card" style="text-align: center; padding: 20px;">
+                            <div class="spinner" style="width: 24px; height: 24px; border-color: rgba(0,0,0,0.1); border-top-color: var(--ios-blue);"></div>
+                            <div style="margin-top: 12px; color: var(--ios-text-secondary);">Loading dashboard...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            loadDashboard();
+        }
+
+        function closeDashboard() {
+            const overlay = document.getElementById('dashboardOverlay');
+            if (overlay) overlay.remove();
         }
 
         function showHistory() {
@@ -882,6 +925,162 @@
         function closeHistory() {
             const overlay = document.getElementById('historyOverlay');
             if (overlay) overlay.remove();
+        }
+
+        async function loadDashboard() {
+            const container = document.getElementById('dashboardContent');
+            if (!container) return;
+
+            if (!scriptUrl) {
+                container.innerHTML = `
+                    <div class="card empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Not configured</div>
+                        <div class="empty-state-text">Open Settings (⋯) and add your Google Apps Script URL.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="card" style="text-align: center; padding: 20px;">
+                    <div class="spinner" style="width: 24px; height: 24px; border-color: rgba(0,0,0,0.1); border-top-color: var(--ios-blue);"></div>
+                    <div style="margin-top: 12px; color: var(--ios-text-secondary);">Fetching expenses...</div>
+                </div>
+            `;
+
+            try {
+                const resp = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'getAll' }),
+                    redirect: 'follow'
+                });
+                const data = await resp.json();
+                if (data.success && Array.isArray(data.expenses)) {
+                    renderDashboard(data.expenses);
+                } else {
+                    container.innerHTML = `
+                        <div class="card empty-state">
+                            <div class="empty-state-icon">✕</div>
+                            <div class="empty-state-title">Load failed</div>
+                            <div class="empty-state-text">${(data && data.error) || 'Could not load dashboard data'}</div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                container.innerHTML = `
+                    <div class="card empty-state">
+                        <div class="empty-state-icon">✕</div>
+                        <div class="empty-state-title">Network error</div>
+                        <div class="empty-state-text">${err.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderDashboard(expenses) {
+            const container = document.getElementById('dashboardContent');
+            if (!container) return;
+
+            const todayKey = localKey(new Date());
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const weekStart = startOfWeek(now);
+
+            let todayTotal = 0, weekTotal = 0, monthTotal = 0;
+            const byCategoryMonth = {};
+
+            for (const exp of expenses) {
+                const amt = parseFloat(exp.amount) || 0;
+                const d = parseYMD(exp.date) || new Date(exp.date);
+                if (isNaN(d)) continue;
+
+                const k = localKey(d);
+                if (k === todayKey) todayTotal += amt;
+
+                if (d >= weekStart && sameWeek(d, weekStart)) weekTotal += amt;
+
+                if (`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` === monthKey) {
+                    monthTotal += amt;
+                    const cat = exp.category || 'Other';
+                    byCategoryMonth[cat] = (byCategoryMonth[cat] || 0) + amt;
+                }
+            }
+
+            const topCats = Object.entries(byCategoryMonth)
+                .sort((a,b) => b[1]-a[1])
+                .slice(0,5);
+
+            const catList = topCats.length ? topCats.map(([cat, sum]) => `
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-title">${cat}</div>
+                    </div>
+                    <div class="list-item-value">₹${sum.toFixed(2)}</div>
+                </div>
+            `).join('') : `
+                <div class="empty-state" style="padding: 20px 12px;">
+                    <div class="empty-state-text">No expenses this month</div>
+                </div>
+            `;
+
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+            const avgDaily = daysInMonth ? (monthTotal / daysInMonth) : 0;
+
+            container.innerHTML = `
+                <div class="section-divider">
+                    <div class="settings-item">
+                        <div class="settings-label">Today</div>
+                        <div class="list-item-value">₹${todayTotal.toFixed(2)}</div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-label">This Week</div>
+                        <div class="list-item-value">₹${weekTotal.toFixed(2)}</div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-label">This Month</div>
+                        <div class="list-item-value">₹${monthTotal.toFixed(2)}</div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-label">Avg per day (month)</div>
+                        <div class="list-item-value">₹${avgDaily.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div class="section-header">By Category (This Month)</div>
+                <div class="card">
+                    ${catList}
+                </div>
+            `;
+        }
+
+        // Helpers for dashboard date logic
+        function localKey(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function parseYMD(s) {
+            if (typeof s !== 'string') return null;
+            const m = s.match(/^\s*(\d{4})-(\d{2})-(\d{2})\s*$/);
+            if (!m) return null;
+            return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+        }
+
+        function startOfWeek(d) {
+            const day = d.getDay();
+            const diff = (day + 6) % 7; // Monday as start
+            const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            s.setDate(s.getDate() - diff);
+            return s;
+        }
+
+        function sameWeek(d, weekStart) {
+            const start = startOfWeek(d);
+            return localKey(start) === localKey(weekStart);
         }
 
         function showSettings() {
